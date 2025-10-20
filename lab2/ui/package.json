@@ -1,0 +1,15 @@
+{
+  "name": "pciscan-ui",
+  "version": "1.0.0",
+  "description": "UI for PCI scan lab",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^28.0.0"
+  }
+}

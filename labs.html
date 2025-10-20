@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>HadesHub - Лабораторные работы</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Inline overrides to ensure correct labs layout and defeat caching/conflicts */
+        .container {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            max-width: 760px !important;
+            margin: 0 auto !important;
+        }
+        h1 { text-align: center !important; margin-bottom: 18px !important; }
+        .labs-list { justify-items: center !important; width: 100% !important; }
+        .labs-list .btn { display:inline-flex !important; align-items:center !important; justify-content:center !important; }
+        .container > a.btn { margin-top: 22px !important; align-self: center !important; }
+    </style>
+</head>
+<body>
+    <div class="lang-switcher">
+        <button class="lang-btn">EN</button>
+    </div>
+    <video autoplay muted loop id="background-video">
+        <source src="Main Menu.mp4" type="video/mp4">
+    </video>
+    <div class="container">
+        <h1 data-key="selectLab">Выберите лабораторную работу</h1>
+        <div class="labs-list">
+            <button onclick="startLab('1')" class="btn" data-key="lab1">1 лаба</button>
+                <button onclick="startLab('2')" class="btn" data-key="lab2">2 лаба</button>
+            <button class="btn disabled" disabled data-key="lab3">3 лаба</button>
+            <button class="btn disabled" disabled data-key="lab4">4 лаба</button>
+            <button class="btn disabled" disabled data-key="lab5">5 лаба</button>
+            <button class="btn disabled" disabled data-key="lab6">6 лаба</button>
+        </div>
+        <a href="index.html" class="btn" data-key="back">Назад</a>
+    </div>
+
+    <script>
+        async function startLab(labId) {
+            try {
+                const response = await fetch(`/start-lab/${labId}`, {
+                    method: 'POST'
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    console.log(result.message);
+                    // Redirect to the lab's UI page
+                    window.location.href = `lab${labId}/ui/index.html`;
+                } else {
+                    alert(`Ошибка запуска лабораторной работы: ${result.message}`);
+                    console.error(result);
+                }
+            } catch (error) {
+                alert('Не удалось связаться с сервером. Убедитесь, что он запущен.');
+                console.error('Fetch error:', error);
+            }
+        }
+    </script>
+    <script src="translate.js"></script>
+</body>
+</html>

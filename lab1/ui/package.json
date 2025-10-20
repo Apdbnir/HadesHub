@@ -1,0 +1,15 @@
+{
+  "name": "powermonitor-ui",
+  "version": "1.0.0",
+  "description": "UI for the power monitor",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^28.0.0"
+  }
+}

@@ -1,0 +1,147 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Source+Sans+Pro:wght@300;400;600&display=swap');
+
+:root {
+    --primary-color: #ff6a00; 
+    --glow-color: rgba(255, 106, 0, 0.7);
+    --background-color: #000000;
+    --surface-color: rgba(18, 18, 18, 0.5); 
+    --surface-border: rgba(255, 106, 0, 0.2);
+    --text-color: #F5F5F5;
+    --text-secondary-color: #A0A0A0;
+    --font-title: 'Cinzel Decorative', cursive;
+    --font-body: 'Source Sans Pro', sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--font-body);
+    background-color: var(--background-color);
+    color: var(--text-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    text-align: center;
+    overflow: hidden;
+}
+
+#background-video {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    min-width: 100%;
+    min-height: 100%;
+    width: auto;
+    height: auto;
+    transform: translateX(-50%) translateY(-50%);
+    z-index: -2;
+}
+
+.container {
+    background-color: var(--surface-color);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--surface-border);
+    border-radius: 15px;
+    padding: 40px;
+    width: 90%;
+    max-width: 800px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5), 0 0 40px var(--glow-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+}
+
+#title-video {
+    width: 320px;
+    height: 256px;
+    border-radius: 10px;
+}
+
+.container .btn {
+    font-size: 2rem;
+    padding: 25px 60px;
+    font-family: var(--font-title);
+}
+
+h1 {
+    font-family: var(--font-title);
+    font-size: 3rem;
+    color: var(--primary-color);
+    text-shadow: 0 0 5px var(--primary-color), 0 0 15px var(--glow-color);
+    margin-bottom: 30px;
+}
+
+.btn {
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 1rem;
+    padding: 12px 30px;
+    border: 2px solid var(--primary-color);
+    background: linear-gradient(45deg, transparent 50%, var(--primary-color) 50%);
+    background-size: 220%;
+    background-position: 0%;
+    color: var(--primary-color);
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.4s ease-in-out;
+    text-transform: uppercase;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn:hover, .lab-item:not(.disabled):hover {
+    background-position: 100%;
+    color: #fff;
+    box-shadow: 0 0 20px var(--glow-color);
+}
+
+.labs-list {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-top: 30px;
+    margin-bottom: 30px;
+}
+
+.labs-list + .btn {
+    margin-top: 60px;
+}
+
+.btn.disabled {
+    border-color: #444;
+    color: #555;
+    background: transparent;
+    pointer-events: none;
+}
+
+.lang-switcher {
+    position: absolute;
+    top: 20px;
+    right: 30px;
+    z-index: 100;
+}
+
+.lang-btn {
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 0.9rem;
+    padding: 8px 20px;
+    border: 1px solid var(--primary-color);
+    background: transparent;
+    color: var(--primary-color);
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.lang-btn:hover {
+    background: var(--primary-color);
+    color: #fff;
+    box-shadow: 0 0 10px var(--glow-color);
+}

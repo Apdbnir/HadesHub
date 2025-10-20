@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Lab 2 - PCI Scan</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="lang-switcher">
+        <button class="lang-btn">EN</button>
+    </div>
+
+    <video autoplay muted loop id="video-bg">
+        <source src="../lab2 Intro.mp4" type="video/mp4">
+    </video>
+    <video autoplay muted loop id="video-bg-main" style="display: none;">
+        <source src="../lan2.mp4" type="video/mp4">
+    </video>
+
+    <div id="start-screen">
+        <button id="start-btn" data-key="startMonitoring">Start PCI scan</button>
+    </div>
+
+    <div id="main-content" style="display:none;">
+        <div class="container">
+            <h1 data-key="pciScan">PCI Devices</h1>
+            <div class="info-grid">
+                <div class="info-item full-width">
+                    <table id="pci-table" style="width:100%;border-collapse:collapse;">
+                        <thead>
+                            <tr>
+                                <th style="text-align:left;padding:8px;border-bottom:1px solid rgba(255,255,255,0.08)">Slot</th>
+                                <th style="text-align:left;padding:8px;border-bottom:1px solid rgba(255,255,255,0.08)">VendorID</th>
+                                <th style="text-align:left;padding:8px;border-bottom:1px solid rgba(255,255,255,0.08)">DeviceID</th>
+                                <th style="text-align:left;padding:8px;border-bottom:1px solid rgba(255,255,255,0.08)">Vendor Name</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pci-body"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="controls">
+                <a href="../../labs.html" class="btn" data-key="back">Back</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="translate.js"></script>
+    <script src="renderer.js"></script>
+</body>
+</html>

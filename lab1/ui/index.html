@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Лабораторная работа №1 - Монитор питания</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="lang-switcher">
+        <button class="lang-btn">EN</button>
+    </div>
+    <video autoplay muted loop id="video-bg">
+        <source src="../1lab Intro.mp4" type="video/mp4">
+    </video>
+    <video autoplay muted loop id="video-bg-main" style="display: none;">
+        <source src="../1lab.mp4" type="video/mp4">
+    </video>
+
+    <div id="start-screen">
+        <button id="start-btn" data-key="startMonitoring">Начать мониторинг</button>
+    </div>
+
+    <div id="main-content" style="display:none;">
+        <div class="container">
+            <h1 data-key="powerMonitor">Монитор питания</h1>
+            <div class="info-grid">
+                <div class="info-item">
+                    <h2 data-key="networkStatus">Статус сети</h2>
+                    <p id="ac-status">загрузка...</p>
+                </div>
+                <div class="info-item">
+                    <h2 data-key="batteryCharge">Заряд батареи</h2>
+                    <p id="battery-percent">...%</p>
+                </div>
+                <div class="info-item">
+                    <h2 data-key="remainingTime">Оставшееся время</h2>
+                    <p id="battery-time">вычисление...</p>
+                </div>
+                <div class="info-item">
+                    <h2 data-key="timeOnBattery">Время от батареи</h2>
+                    <p id="time-on-battery">вычисление...</p>
+                </div>
+                <div class="info-item">
+                    <h2 data-key="saverMode">Режим экономии</h2>
+                    <p id="saver-mode">вычисление...</p>
+                </div>
+                <div class="info-item">
+                    <h2 data-key="batteryType">Тип батареи</h2>
+                    <p id="battery-chemistry">вычисление...</p>
+                </div>
+                <div class="info-item full-width">
+                    <h2 data-key="batteryInfo">Информация о батарее</h2>
+                    <p id="battery-info">загрузка...</p>
+                </div>
+            </div>
+            <div class="controls">
+                <button id="sleep-btn" data-key="sleep">Сон</button>
+                <button id="hibernate-btn" data-key="hibernate">Гибернация</button>
+                <a href="../../labs.html" class="btn" data-key="back">Назад</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="translate.js"></script>
+    <script src="renderer.js"></script>
+</body>
+</html>
