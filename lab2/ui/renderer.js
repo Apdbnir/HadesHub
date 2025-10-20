@@ -5,6 +5,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const videoBg = document.getElementById('video-bg');
     const videoBgMain = document.getElementById('video-bg-main');
     const pciBody = document.getElementById('pci-body');
+    // Map to track displayed devices and avoid duplicates. Keyed by slot when available,
+    // otherwise by vid:did:vendorName
+    const devicesMap = new Map();
 
     if (startBtn && startScreen && mainContent && videoBg && videoBgMain) {
         videoBg.play().catch(error => { console.error('Video autoplay failed:', error); });
@@ -33,15 +36,40 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function makeKey(slot, vid, did, vendorName) {
+        if (slot && slot !== '-') return slot;
+        return `${vid}:${did}:${vendorName || ''}`;
+    }
+
+    function updateRowElements(tr, slot, vid, did, vendorName) {
+        // Ensure there are 4 cells; create if structure changed
+        while (tr.children.length < 4) tr.appendChild(document.createElement('td'));
+        tr.children[0].textContent = slot;
+        tr.children[1].textContent = vid;
+        tr.children[2].textContent = did;
+        tr.children[3].textContent = vendorName;
+        // keep inline styles consistent
+        for (let i = 0; i < 4; i++) {
+            tr.children[i].style.padding = '8px';
+            tr.children[i].style.borderBottom = '1px solid rgba(255,255,255,0.06)';
+        }
+    }
+
     function addRow(slot, vid, did, vendorName) {
+        const key = makeKey(slot, vid, did, vendorName);
+        if (devicesMap.has(key)) {
+            // Update existing row instead of adding duplicate
+            const existing = devicesMap.get(key);
+            updateRowElements(existing, slot, vid, did, vendorName || '');
+            return existing;
+        }
+
         const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.06)">${slot}</td>
-            <td style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.06)">${vid}</td>
-            <td style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.06)">${did}</td>
-            <td style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.06)">${vendorName}</td>
-        `;
+        updateRowElements(tr, slot, vid, did, vendorName || '');
+        tr.dataset.deviceKey = key;
+        devicesMap.set(key, tr);
         pciBody.appendChild(tr);
+        return tr;
     }
 
     function parseLine(line) {
@@ -90,9 +118,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (data.line) {
                     parseLine(data.line);
                 } else if (Array.isArray(data.devices)) {
-                    // Some backends may send full device arrays
+                    // Some backends may send full device arrays. Clear both DOM and internal map
+                    devicesMap.clear();
                     pciBody.innerHTML = '';
-                    data.devices.forEach((dev, idx) => addRow(idx+1, dev.vid, dev.did, dev.vendor || ''));
+                    data.devices.forEach((dev, idx) => addRow(dev.slot || (idx+1), dev.vid, dev.did, dev.vendor || ''));
                 } else if (data.slot && data.vid && data.did) {
                     addRow(data.slot, data.vid, data.did, data.vendor || '');
                 } else {

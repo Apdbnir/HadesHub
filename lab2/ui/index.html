@@ -26,17 +26,19 @@
             <h1 data-key="pciScan">PCI Devices</h1>
             <div class="info-grid">
                 <div class="info-item full-width">
-                    <table id="pci-table" style="width:100%;border-collapse:collapse;">
-                        <thead>
-                            <tr>
-                                <th style="text-align:left;padding:8px;border-bottom:1px solid rgba(255,255,255,0.08)">Slot</th>
-                                <th style="text-align:left;padding:8px;border-bottom:1px solid rgba(255,255,255,0.08)">VendorID</th>
-                                <th style="text-align:left;padding:8px;border-bottom:1px solid rgba(255,255,255,0.08)">DeviceID</th>
-                                <th style="text-align:left;padding:8px;border-bottom:1px solid rgba(255,255,255,0.08)">Vendor Name</th>
-                            </tr>
-                        </thead>
-                        <tbody id="pci-body"></tbody>
-                    </table>
+                    <div id="pci-scroll">
+                        <table id="pci-table" style="width:100%;border-collapse:collapse;">
+                            <thead>
+                                <tr>
+                                    <th style="text-align:left;padding:8px;border-bottom:1px solid rgba(255,255,255,0.08)">Slot</th>
+                                    <th style="text-align:left;padding:8px;border-bottom:1px solid rgba(255,255,255,0.08)">VendorID</th>
+                                    <th style="text-align:left;padding:8px;border-bottom:1px solid rgba(255,255,255,0.08)">DeviceID</th>
+                                    <th style="text-align:left;padding:8px;border-bottom:1px solid rgba(255,255,255,0.08)">Vendor Name</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pci-body"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
             <div class="controls">

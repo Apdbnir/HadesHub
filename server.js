@@ -11,6 +11,7 @@ const wss = new WebSocket.Server({ server });
 
 const port = 3000;
 let powerMonitorProcess = null;
+let lab2Process = null;
 
 // Serve static files from the project root
 app.use(express.static(__dirname));
@@ -18,6 +19,15 @@ app.use(express.static(__dirname));
 // WebSocket connection handler
 wss.on('connection', (ws) => {
     console.log('Client connected to WebSocket');
+
+    // If a client connects and lab2 process isn't running, start it automatically
+    (async () => {
+        try {
+            await startLab2();
+        } catch (e) {
+            console.error('Failed to auto-start Lab2 on WS connection:', e);
+        }
+    })();
 
     ws.on('message', (message) => {
         try {
@@ -34,14 +44,101 @@ wss.on('connection', (ws) => {
 
     ws.on('close', () => {
         console.log('Client disconnected');
-        // If no clients are left, kill the child process
-        if (wss.clients.size === 0 && powerMonitorProcess) {
-            console.log('No clients left, stopping powermonitor.exe');
-            powerMonitorProcess.kill();
-            powerMonitorProcess = null;
+        // If no clients are left, kill lab processes
+        if (wss.clients.size === 0) {
+            if (powerMonitorProcess) {
+                console.log('No clients left, stopping powermonitor.exe');
+                powerMonitorProcess.kill();
+                powerMonitorProcess = null;
+            }
+            if (lab2Process) {
+                console.log('No clients left, stopping pciscan.exe');
+                lab2Process.kill();
+                lab2Process = null;
+            }
         }
     });
 });
+
+// Helper to compile and start lab2 (id=2). Returns the child process.
+async function startLab2() {
+    const fs = require('fs');
+    const lab2Dir = path.join(__dirname, 'lab2');
+    const exePath = path.join(lab2Dir, 'pciscan.exe');
+    const srcPath = path.join(lab2Dir, 'main.cpp');
+
+    if (lab2Process) return lab2Process;
+
+    function compileWithGpp() {
+        return new Promise((resolve) => {
+            // compile both main.cpp and pci_codes.cpp, then link with SetupAPI and CfgMgr
+            const gpp = spawn('g++', ['main.cpp', 'pci_codes.cpp', '-O2', '-std=c++17', '-o', 'pciscan.exe', '-lsetupapi', '-lcfgmgr32'], { cwd: lab2Dir });
+            gpp.stdout.on('data', d => console.log(`[g++] ${d}`));
+            gpp.stderr.on('data', d => console.error(`[g++] ${d}`));
+            gpp.on('close', (code) => resolve(code === 0));
+            gpp.on('error', () => resolve(false));
+        });
+    }
+
+    function compileWithCl() {
+        return new Promise((resolve) => {
+            const cl = spawn('cl', ['main.cpp', '/Fe:pciscan.exe'], { cwd: lab2Dir });
+            cl.stdout.on('data', d => console.log(`[cl] ${d}`));
+            cl.stderr.on('data', d => console.error(`[cl] ${d}`));
+            cl.on('close', (code) => resolve(code === 0));
+            cl.on('error', () => resolve(false));
+        });
+    }
+
+    if (fs.existsSync(exePath)) {
+        console.log(`Attempting to start existing executable: ${exePath}`);
+        lab2Process = spawn(exePath);
+    } else if (fs.existsSync(srcPath)) {
+        console.log('Source found for Lab2; attempting to compile main.cpp');
+        let built = await compileWithGpp();
+        if (!built) {
+            console.log('g++ compile failed or not found, trying cl (MSVC)');
+            built = await compileWithCl();
+        }
+
+        if (built && fs.existsSync(exePath)) {
+            console.log('Compilation succeeded; starting pciscan.exe');
+            lab2Process = spawn(exePath);
+        } else {
+            throw new Error('Failed to compile lab2 source.');
+        }
+    } else {
+        throw new Error('Lab2 source/executable not found.');
+    }
+
+    // Pipe stdout lines to broadcast
+    const rl2 = readline.createInterface({ input: lab2Process.stdout });
+    rl2.on('line', (line) => {
+        try {
+            const parsed = JSON.parse(line);
+            broadcast(parsed);
+        } catch (e) {
+            broadcast({ line: line });
+        }
+    });
+
+    lab2Process.stderr.on('data', (data) => {
+        console.error(`Lab2 stderr: ${data}`);
+    });
+
+    lab2Process.on('close', (code) => {
+        console.log(`Lab2 process exited with code ${code}`);
+        broadcast({ event: 'process_exited', code: code });
+        lab2Process = null;
+    });
+
+    lab2Process.on('error', (err) => {
+        console.error('Failed to start lab2 subprocess.', err);
+        lab2Process = null;
+    });
+
+    return lab2Process;
+}
 
 function broadcast(data) {
     const jsonData = JSON.stringify(data);
@@ -53,7 +150,7 @@ function broadcast(data) {
 }
 
 // Endpoint to start a lab executable
-app.post('/start-lab/:labId', (req, res) => {
+app.post('/start-lab/:labId', async (req, res) => {
     const labId = req.params.labId;
 
     if (labId === '1') {
@@ -100,16 +197,60 @@ app.post('/start-lab/:labId', (req, res) => {
     } else {
         // Support starting lab 2 if an executable is provided in lab2 folder (pciscan.exe)
         if (labId === '2') {
-            const executablePath = path.join(__dirname, 'lab2', 'pciscan.exe');
             const fs = require('fs');
+            const lab2Dir = path.join(__dirname, 'lab2');
+            const exePath = path.join(lab2Dir, 'pciscan.exe');
+            const srcPath = path.join(lab2Dir, 'main.cpp');
+            const jsFallback = path.join(lab2Dir, 'pciscan.js');
 
-            if (!fs.existsSync(executablePath)) {
-                console.log(`Lab 2 executable not found at ${executablePath}`);
-                return res.status(404).json({ message: `Executable for lab ${labId} not found.` });
+            // Helper: try compile with g++, then cl as fallback
+            function compileWithGpp() {
+                return new Promise((resolve) => {
+                    const gpp = spawn('g++', ['main.cpp', '-O2', '-std=c++17', '-o', 'pciscan.exe'], { cwd: lab2Dir });
+                    gpp.stdout.on('data', d => console.log(`[g++] ${d}`));
+                    gpp.stderr.on('data', d => console.error(`[g++] ${d}`));
+                    gpp.on('close', (code) => resolve(code === 0));
+                    gpp.on('error', () => resolve(false));
+                });
             }
 
-            console.log(`Attempting to start: ${executablePath}`);
-            const lab2Process = spawn(executablePath);
+            function compileWithCl() {
+                return new Promise((resolve) => {
+                    // cl requires Visual Studio environment; try a simple call
+                    const cl = spawn('cl', ['main.cpp', '/Fe:pciscan.exe'], { cwd: lab2Dir });
+                    cl.stdout.on('data', d => console.log(`[cl] ${d}`));
+                    cl.stderr.on('data', d => console.error(`[cl] ${d}`));
+                    cl.on('close', (code) => resolve(code === 0));
+                    cl.on('error', () => resolve(false));
+                });
+            }
+
+            let lab2Process;
+
+            // If exe already exists, prefer it
+            if (fs.existsSync(exePath)) {
+                console.log(`Attempting to start existing executable: ${exePath}`);
+                lab2Process = spawn(exePath);
+            } else if (fs.existsSync(srcPath)) {
+                // Try to compile
+                console.log('Source found for Lab2; attempting to compile main.cpp');
+                let built = await compileWithGpp();
+                if (!built) {
+                    console.log('g++ compile failed or not found, trying cl (MSVC)');
+                    built = await compileWithCl();
+                }
+
+                if (built && fs.existsSync(exePath)) {
+                    console.log('Compilation succeeded; starting pciscan.exe');
+                    lab2Process = spawn(exePath);
+                } else {
+                    console.log(`Lab 2 source present but failed to compile or no exe produced (checked: ${srcPath})`);
+                    return res.status(500).json({ message: `Failed to compile lab ${labId}. Please ensure a valid compiler is installed.` });
+                }
+            } else {
+                console.log(`Lab 2 executable/source not found (checked: ${exePath}, ${srcPath})`);
+                return res.status(404).json({ message: `Source or executable for lab ${labId} not found.` });
+            }
 
             const rl2 = readline.createInterface({ input: lab2Process.stdout });
             rl2.on('line', (line) => {
