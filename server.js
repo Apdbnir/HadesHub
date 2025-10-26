@@ -12,6 +12,7 @@ const wss = new WebSocket.Server({ server });
 const port = 3000;
 let powerMonitorProcess = null;
 let lab2Process = null;
+let lab3Process = null;
 
 // Serve static files from the project root
 app.use(express.static(__dirname));
@@ -55,6 +56,11 @@ wss.on('connection', (ws) => {
                 console.log('No clients left, stopping pciscan.exe');
                 lab2Process.kill();
                 lab2Process = null;
+            }
+            if (lab3Process) {
+                console.log('No clients left, stopping diskscan.exe');
+                lab3Process.kill();
+                lab3Process = null;
             }
         }
     });
@@ -275,6 +281,92 @@ app.post('/start-lab/:labId', async (req, res) => {
             lab2Process.on('error', (err) => {
                 console.error('Failed to start lab2 subprocess.', err);
                 return res.status(500).json({ message: 'Failed to start lab2 executable.' });
+            });
+
+            return res.status(200).json({ message: `Lab ${labId} started successfully.` });
+        }
+
+        // Support for lab 3 (disk information)
+        else if (labId === '3') {
+            const fs = require('fs');
+            const lab3Dir = path.join(__dirname, 'lab3');
+            const exePath = path.join(lab3Dir, 'diskscan.exe');  // Following the pattern from lab2 (pciscan.exe)
+            const srcPath = path.join(lab3Dir, 'main.cpp');
+
+            // For lab3, we'll compile and run the main.cpp file
+            function compileWithGpp() {
+                return new Promise((resolve) => {
+                    const gpp = spawn('g++', ['main.cpp', '-O2', '-std=c++17', '-o', 'diskscan.exe', '-lsetupapi', '-lcfgmgr32'], { cwd: lab3Dir });
+                    gpp.stdout.on('data', d => console.log(`[g++] ${d}`));
+                    gpp.stderr.on('data', d => console.error(`[g++] ${d}`));
+                    gpp.on('close', (code) => resolve(code === 0));
+                    gpp.on('error', () => resolve(false));
+                });
+            }
+
+            function compileWithCl() {
+                return new Promise((resolve) => {
+                    const cl = spawn('cl', ['main.cpp', '/Fe:diskscan.exe'], { cwd: lab3Dir });
+                    cl.stdout.on('data', d => console.log(`[cl] ${d}`));
+                    cl.stderr.on('data', d => console.error(`[cl] ${d}`));
+                    cl.on('close', (code) => resolve(code === 0));
+                    cl.on('error', () => resolve(false));
+                });
+            }
+
+            try {
+                if (fs.existsSync(exePath)) {
+                    console.log(`Attempting to start existing executable: ${exePath}`);
+                    lab3Process = spawn(exePath);
+                } else {
+                    throw new Error('Executable does not exist'); // Force compilation if executable doesn't exist
+                }
+            } catch (spawnError) {
+                // If spawning executable failed or executable doesn't exist, try to compile
+                if (fs.existsSync(srcPath)) {
+                    console.log('Source found for Lab3; attempting to compile main.cpp');
+                    let built = await compileWithGpp();
+                    if (!built) {
+                        console.log('g++ compile failed or not found, trying cl (MSVC)');
+                        built = await compileWithCl();
+                    }
+
+                    if (built && fs.existsSync(path.join(lab3Dir, 'diskscan.exe'))) {
+                        console.log('Compilation succeeded; starting diskscan.exe');
+                        lab3Process = spawn(path.join(lab3Dir, 'diskscan.exe'));
+                    } else {
+                        console.log(`Lab 3 source present but failed to compile (checked: ${srcPath})`);
+                        return res.status(500).json({ message: `Failed to compile lab ${labId}. Please ensure a valid compiler is installed.` });
+                    }
+                } else {
+                    console.log(`Lab 3 executable/source not found (checked: ${exePath}, ${srcPath})`);
+                    return res.status(404).json({ message: `Source or executable for lab ${labId} not found.` });
+                }
+            }
+
+            const rl3 = readline.createInterface({ input: lab3Process.stdout });
+            rl3.on('line', (line) => {
+                try {
+                    const parsed = JSON.parse(line);
+                    // Broadcast disk information to all WebSocket clients with lab identifier
+                    broadcast({ type: 'lab3', data: parsed });
+                } catch (e) {
+                    // Error silently - not logging to keep console clean
+                }
+            });
+
+            lab3Process.stderr.on('data', (data) => {
+                console.error(`Lab3 stderr: ${data}`);
+            });
+
+            lab3Process.on('close', (code) => {
+                console.log(`Lab3 process exited with code ${code}`);
+                broadcast({ event: 'process_exited', code: code });
+            });
+
+            lab3Process.on('error', (err) => {
+                console.error('Failed to start lab3 subprocess.', err);
+                return res.status(500).json({ message: 'Failed to start lab3 executable.' });
             });
 
             return res.status(200).json({ message: `Lab ${labId} started successfully.` });
