@@ -9,17 +9,17 @@
     --text-color: #F5F5F5;
     --text-secondary-color: #A0A0A0;
     --font-title: 'Cinzel Decorative', cursive;
-    --font-body: 'Source Sans Pro', sans-serif;
+    --font-body: 'Cinzel Decorative', cursive;
 }
 
 * {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
+    font-family: var(--font-body);
 }
 
 body {
-    font-family: var(--font-body);
     background-color: var(--background-color);
     color: var(--text-color);
     display: flex;
@@ -66,7 +66,7 @@ body {
 .container .btn {
     font-size: 2rem;
     padding: 25px 60px;
-    font-family: var(--font-title);
+    font-family: var(--font-body);
 }
 
 h1 {
@@ -78,7 +78,7 @@ h1 {
 }
 
 .btn {
-    font-family: var(--font-body);
+    font-family: var(--font-title);
     font-weight: 600;
     font-size: 1rem;
     padding: 12px 30px;
@@ -128,7 +128,7 @@ h1 {
 }
 
 .lang-btn {
-    font-family: var(--font-body);
+    font-family: var(--font-title);
     font-weight: 600;
     font-size: 0.9rem;
     padding: 8px 20px;

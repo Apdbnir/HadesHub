@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Лабораторная работа №4 - Камера наблюдения</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="lang-switcher">
+        <button class="lang-btn">EN</button>
+    </div>
+    <video autoplay muted loop id="video-bg">
+        <source src="../4lab Intro.mp4" type="video/mp4">
+    </video>
+    <video autoplay muted loop id="video-bg-main" style="display: none;">
+        <source src="../4lab.mp4" type="video/mp4">
+    </video>
+
+    <div id="start-screen">
+        <button id="start-btn" data-key="startWebcamMonitoring">Начать мониторинг камеры</button>
+    </div>
+
+    <div id="main-content" style="display:none;">
+        <div class="container">
+            <h1 data-key="webcamMonitor">Мониторинг камеры</h1>
+            <div class="info-grid">
+                <div class="info-item">
+                    <h2 data-key="webcamStatus">Статус камеры</h2>
+                    <p id="webcam-status">проверка...</p>
+                </div>
+                <div class="info-item">
+                    <h2 data-key="webcamInfo">Информация о камере</h2>
+                    <p id="webcam-info">загрузка...</p>
+                </div>
+                <div class="info-item">
+                    <h2 data-key="recordingStatus">Статус записи</h2>
+                    <p id="recording-status">не записывается</p>
+                </div>
+                <div class="info-item">
+                    <h2 data-key="hiddenMode">Скрытый режим</h2>
+                    <p id="hidden-mode">выключен</p>
+                </div>
+                <div class="info-item full-width">
+                    <h2 data-key="preview">Предпросмотр</h2>
+                    <div id="preview-container">
+                        <video id="webcam-preview" autoplay playsinline></video>
+                    </div>
+                </div>
+            </div>
+            <div class="controls">
+                <button id="capture-photo-btn" data-key="capturePhoto">Сделать фото</button>
+                <button id="start-recording-btn" data-key="startRecording">Начать запись</button>
+                <button id="stop-recording-btn" data-key="stopRecording">Остановить запись</button>
+                <button id="toggle-hidden-btn" data-key="toggleHidden">Переключить скрытый режим</button>
+                <a href="../../labs.html" class="btn" data-key="back">Назад</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="translate.js"></script>
+    <script src="renderer.js"></script>
+</body>
+</html>

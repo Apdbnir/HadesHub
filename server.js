@@ -371,6 +371,96 @@ app.post('/start-lab/:labId', async (req, res) => {
 
             return res.status(200).json({ message: `Lab ${labId} started successfully.` });
         }
+        
+        // Support for lab 4 (webcam monitoring)
+        else if (labId === '4') {
+            const fs = require('fs');
+            const lab4Dir = path.join(__dirname, 'lab4');
+            const exePath = path.join(lab4Dir, 'webcammonitor.exe');  // Following the pattern
+            const srcPath = path.join(lab4Dir, 'main.cpp');
+
+            function compileWithGpp() {
+                return new Promise((resolve) => {
+                    const gpp = spawn('g++', ['main.cpp', '-O2', '-std=c++17', '-o', 'webcammonitor.exe', '-lole32', '-lwindowscodecs'], { cwd: lab4Dir });
+                    gpp.stdout.on('data', d => console.log(`[g++] ${d}`));
+                    gpp.stderr.on('data', d => console.error(`[g++] ${d}`));
+                    gpp.on('close', (code) => resolve(code === 0));
+                    gpp.on('error', () => resolve(false));
+                });
+            }
+
+            function compileWithCl() {
+                return new Promise((resolve) => {
+                    const cl = spawn('cl', ['main.cpp', '/Fe:webcammonitor.exe'], { cwd: lab4Dir });
+                    cl.stdout.on('data', d => console.log(`[cl] ${d}`));
+                    cl.stderr.on('data', d => console.error(`[cl] ${d}`));
+                    cl.on('close', (code) => resolve(code === 0));
+                    cl.on('error', () => resolve(false));
+                });
+            }
+
+            // If we already have a lab4 process, kill it first
+            if (global.lab4Process) {
+                global.lab4Process.kill();
+            }
+
+            try {
+                if (fs.existsSync(exePath)) {
+                    console.log(`Attempting to start existing executable: ${exePath}`);
+                    global.lab4Process = spawn(exePath);
+                } else {
+                    throw new Error('Executable does not exist'); // Force compilation if executable doesn't exist
+                }
+            } catch (spawnError) {
+                // If spawning executable failed or executable doesn't exist, try to compile
+                if (fs.existsSync(srcPath)) {
+                    console.log('Source found for Lab4; attempting to compile main.cpp');
+                    let built = await compileWithGpp();
+                    if (!built) {
+                        console.log('g++ compile failed or not found, trying cl (MSVC)');
+                        built = await compileWithCl();
+                    }
+
+                    if (built && fs.existsSync(path.join(lab4Dir, 'webcammonitor.exe'))) {
+                        console.log('Compilation succeeded; starting webcammonitor.exe');
+                        global.lab4Process = spawn(path.join(lab4Dir, 'webcammonitor.exe'));
+                    } else {
+                        console.log(`Lab 4 source present but failed to compile (checked: ${srcPath})`);
+                        return res.status(500).json({ message: `Failed to compile lab ${labId}. Please ensure a valid compiler is installed.` });
+                    }
+                } else {
+                    console.log(`Lab 4 executable/source not found (checked: ${exePath}, ${srcPath})`);
+                    return res.status(404).json({ message: `Source or executable for lab ${labId} not found.` });
+                }
+            }
+
+            const rl4 = readline.createInterface({ input: global.lab4Process.stdout });
+            rl4.on('line', (line) => {
+                try {
+                    const parsed = JSON.parse(line);
+                    // Broadcast webcam information to all WebSocket clients with lab identifier
+                    broadcast({ type: 'lab4', data: parsed });
+                } catch (e) {
+                    // Error silently - not logging to keep console clean
+                }
+            });
+
+            global.lab4Process.stderr.on('data', (data) => {
+                console.error(`Lab4 stderr: ${data}`);
+            });
+
+            global.lab4Process.on('close', (code) => {
+                console.log(`Lab4 process exited with code ${code}`);
+                broadcast({ event: 'process_exited', code: code });
+            });
+
+            global.lab4Process.on('error', (err) => {
+                console.error('Failed to start lab4 subprocess.', err);
+                return res.status(500).json({ message: 'Failed to start lab4 executable.' });
+            });
+
+            return res.status(200).json({ message: `Lab ${labId} started successfully.` });
+        }
 
         res.status(404).json({ message: `Executable for lab ${labId} not found or not configured.` });
     }

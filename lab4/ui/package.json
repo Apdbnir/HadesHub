@@ -1,0 +1,21 @@
+{
+  "name": "hadeshub-lab4",
+  "version": "1.0.0",
+  "description": "HadesHub Lab 4 - Webcam Monitoring",
+  "main": "index.html",
+  "scripts": {
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "hadeshub",
+    "webcam",
+    "monitoring",
+    "security"
+  ],
+  "author": "HadesHub Team",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^28.0.0"
+  }
+}

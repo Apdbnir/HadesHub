@@ -1,24 +1,66 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Declare variables at the top
+    let lastData = null;
+    let monitoringStarted = false; // Flag to indicate if monitoring has started
+    let lastPowerStatus = null; // Track the last power status to avoid unnecessary updates
+    let lastBatteryPercent = null; // Track last battery percentage to avoid flickering
+    let batteryPercentDisplayed = false; // Flag to track if a battery percentage has been displayed at least once
+    let acStatusUpdateTimeout = null; // Timeout for AC status stabilization
+    let batteryPercentUpdateTimeout = null; // Timeout for battery percentage stabilization
+    let acStatusHistory = []; // Track recent AC status values to determine stable state
+    const AC_STATUS_HISTORY_LENGTH = 5; // Number of recent values to consider (reduced for faster response)
+    const AC_STATUS_STABLE_THRESHOLD = 3; // Number of similar values needed to consider stable (reduced for faster response)
+    let lastAcStatusUpdate = null; // Track last processed AC status to avoid processing same value rapidly
+    
     // --- Start Screen Logic ---
     const startBtn = document.getElementById('start-btn');
     const startScreen = document.getElementById('start-screen');
     const mainContent = document.getElementById('main-content');
-    const videoBg = document.getElementById('video-bg');
-    const videoBgMain = document.getElementById('video-bg-main');
+    const videoBgNetwork = document.getElementById('video-bg-network');
+    const videoBgBattery = document.getElementById('video-bg-battery');
+    const videoBgIntro = document.getElementById('video-bg-intro');
 
-    if (startBtn && startScreen && mainContent && videoBg && videoBgMain) {
-        videoBg.play().catch(error => {
-            console.error("Video autoplay failed:", error);
+    if (startBtn && startScreen && mainContent && videoBgNetwork && videoBgBattery && videoBgIntro) {
+        videoBgIntro.play().catch(error => {
+            console.error("Intro video autoplay failed:", error);
         });
 
         startBtn.addEventListener('click', () => {
+            // Set the flag to indicate monitoring has started
+            monitoringStarted = true;
+            
+            // Hide the intro video
+            videoBgIntro.style.display = 'none';
+            
+            // Initially show the appropriate power-based video based on the latest received data
+            if (lastData && lastData.AC_LINE_STATUS) {
+                if (lastData.AC_LINE_STATUS === 'Online') {
+                    // On AC power - show network video
+                    videoBgNetwork.style.display = 'block';
+                    videoBgBattery.style.display = 'none';
+                    videoBgNetwork.play().catch(error => {
+                        console.error("Network video play failed:", error);
+                    });
+                } else {
+                    // On battery power - show battery video
+                    videoBgNetwork.style.display = 'none';
+                    videoBgBattery.style.display = 'block';
+                    videoBgBattery.play().catch(error => {
+                        console.error("Battery video play failed:", error);
+                    });
+                }
+            } else {
+                // Fallback: show network video by default
+                videoBgNetwork.style.display = 'block';
+                videoBgBattery.style.display = 'none';
+                videoBgNetwork.play().catch(error => {
+                    console.error("Network video play failed:", error);
+                });
+            }
+            
             startScreen.style.display = 'none';
-            videoBg.style.display = 'none';
-            videoBgMain.style.display = 'block';
-            videoBgMain.play().catch(error => {
-                console.error("Main video autoplay failed:", error);
-            });
             mainContent.style.display = 'flex';
+            // Video switching will now be handled in updatePowerInfo based on WebSocket data
         });
     } else {
         console.error('Start screen elements not found!');
@@ -47,7 +89,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- WebSocket ---
     const socket = new WebSocket('ws://localhost:3000');
-
     socket.onopen = () => { elements.acStatus.textContent = 'Подключено'; };
     socket.onerror = () => { elements.acStatus.textContent = "Ошибка соединения"; };
     socket.onclose = () => { elements.acStatus.textContent = "Соединение потеряно"; };
@@ -55,9 +96,14 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.onmessage = (event) => {
         try {
             const data = JSON.parse(event.data);
-            // Debug: log incoming power data so we can see TRACKING_ACTIVE / TIME_ON_BATTERY
-            console.debug('power-monitor incoming:', data);
-            updatePowerInfo(data);
+            // Only update power info and switch videos after monitoring has started
+            if (monitoringStarted) {
+                updatePowerInfo(data);
+            } else {
+                // Store the initial data but don't switch videos yet
+                // We'll use this data after the user clicks "Start Monitoring"
+                lastData = data;
+            }
         } catch (error) {
             console.error("Ошибка парсинга JSON:", error, "Получено:", event.data);
         }
@@ -99,17 +145,103 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${h} ${translations[lang].timeUnitHour} ${m} ${translations[lang].timeUnitMin} ${s} ${translations[lang].timeUnitSec}`;
     }
 
-    let lastData = null; 
-
     function updatePowerInfo(data) {
         lastData = data;
         let currentLang = localStorage.getItem('language') || 'ru';
 
-        elements.acStatus.textContent = data.AC_LINE_STATUS === 'Online' 
-            ? translations[currentLang].acStatusOnline 
-            : translations[currentLang].acStatusOffline;
+        // Update AC status - implement better stabilization
+        // Add current status to history
+        acStatusHistory.push(data.AC_LINE_STATUS);
+        // Keep only the recent history
+        if (acStatusHistory.length > AC_STATUS_HISTORY_LENGTH) {
+            acStatusHistory.shift();
+        }
+        
+        // Determine if we have a stable status to display
+        let shouldUpdate = false;
+        let stableStatus = null;
+        
+        // If this is the first time setting power status, use the current value
+        if (lastPowerStatus === null) {
+            stableStatus = data.AC_LINE_STATUS;
+            shouldUpdate = true;
+        } 
+        // For subsequent checks, only update when there's a clear majority
+        else {
+            // Count occurrences of each status in the recent history
+            const onlineCount = acStatusHistory.filter(status => status === 'Online').length;
+            const offlineCount = acStatusHistory.filter(status => status === 'Offline').length;
             
-        elements.batteryPercent.textContent = data.BATTERY_PERCENT;
+            // Update only when we have clear majority (3 out of 5) in the new direction
+            if (onlineCount >= AC_STATUS_STABLE_THRESHOLD && lastPowerStatus !== 'Online') {
+                stableStatus = 'Online';
+                shouldUpdate = true;
+            } else if (offlineCount >= AC_STATUS_STABLE_THRESHOLD && lastPowerStatus !== 'Offline') {
+                stableStatus = 'Offline';
+                shouldUpdate = true;
+            }
+            // If no clear majority toward a different state, keep current status
+            else {
+                stableStatus = lastPowerStatus;
+            }
+        }
+        
+        // Only update if we've determined we should update
+        if (shouldUpdate && lastPowerStatus !== stableStatus) {
+            const newAcStatusText = stableStatus === 'Online' 
+                ? translations[currentLang].acStatusOnline 
+                : translations[currentLang].acStatusOffline;
+            
+            elements.acStatus.textContent = newAcStatusText;
+            
+            // Update the video background based on power status
+            lastPowerStatus = stableStatus;
+            if (stableStatus === 'Online') {
+                // On AC power - show network video
+                videoBgNetwork.style.display = 'block';
+                videoBgBattery.style.display = 'none';
+                videoBgNetwork.play().catch(error => {
+                    console.error("Network video play failed:", error);
+                });
+            } else {
+                // On battery power - show battery video
+                videoBgNetwork.style.display = 'none';
+                videoBgBattery.style.display = 'block';
+                videoBgBattery.play().catch(error => {
+                    console.error("Battery video play failed:", error);
+                });
+            }
+        }
+        
+        // Handle battery percentage - show number once it appears, keep it until new number
+        const batteryPercentValue = parseInt(data.BATTERY_PERCENT, 10);
+        if (!isNaN(batteryPercentValue) && batteryPercentValue >= 0 && batteryPercentValue <= 100) {
+            const newDisplayValue = batteryPercentValue + '%';
+            
+            // Update immediately if value has changed
+            if (lastBatteryPercent !== batteryPercentValue) {
+                // Clear any existing timeout
+                if (batteryPercentUpdateTimeout) {
+                    clearTimeout(batteryPercentUpdateTimeout);
+                }
+                
+                // Update the display immediately with the new value
+                elements.batteryPercent.textContent = newDisplayValue;
+                // Update the stored last value
+                lastBatteryPercent = batteryPercentValue;
+                // Mark that a battery percentage has been displayed
+                batteryPercentDisplayed = true;
+            }
+            // If the value hasn't changed, don't update (keep the existing display)
+        } else {
+            // If we can't parse the percentage, only update to '...' if no number has ever been displayed
+            if (!batteryPercentDisplayed) {
+                // If a number has never been displayed, show dots initially
+                elements.batteryPercent.textContent = '...%';
+            }
+            // Once a number has been displayed, keep showing the last known number
+            // even if subsequent data is unavailable
+        }
         
         const saverMode = (data.SAVER_MODE || "").trim();
         elements.saverMode.textContent = saverMode === 'On' 
@@ -191,6 +323,16 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('languageChange', (event) => {
         if(lastData) {
             updatePowerInfo(lastData);
+        }
+    });
+    
+    // Clean up timeouts when the page is unloaded
+    window.addEventListener('beforeunload', () => {
+        if (acStatusUpdateTimeout) {
+            clearTimeout(acStatusUpdateTimeout);
+        }
+        if (batteryPercentUpdateTimeout) {
+            clearTimeout(batteryPercentUpdateTimeout);
         }
     });
 });
