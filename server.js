@@ -212,7 +212,7 @@ app.post('/start-lab/:labId', async (req, res) => {
             // Helper: try compile with g++, then cl as fallback
             function compileWithGpp() {
                 return new Promise((resolve) => {
-                    const gpp = spawn('g++', ['main.cpp', '-O2', '-std=c++17', '-o', 'pciscan.exe'], { cwd: lab2Dir });
+                    const gpp = spawn('g++', ['main.cpp', 'pci_codes.cpp', '-O2', '-std=c++17', '-o', 'pciscan.exe', '-lsetupapi', '-lcfgmgr32'], { cwd: lab2Dir });
                     gpp.stdout.on('data', d => console.log(`[g++] ${d}`));
                     gpp.stderr.on('data', d => console.error(`[g++] ${d}`));
                     gpp.on('close', (code) => resolve(code === 0));

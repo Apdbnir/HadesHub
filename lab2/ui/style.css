@@ -27,8 +27,12 @@ h1 { font-family:var(--font-title); font-size:2.4rem; color:var(--primary-color)
 
 /* Scrollable devices list */
 #pci-scroll { max-height: 320px; overflow-y: auto; padding-right: 8px; }
-#pci-scroll table { width:100%; border-collapse:collapse; }
+#pci-scroll table { width:100%; border-collapse:collapse; table-layout: fixed; }
 #pci-scroll thead th { position: sticky; top: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(6px); }
+#pci-scroll thead th:nth-child(1) { width: 10%; } /* Slot */
+#pci-scroll thead th:nth-child(2) { width: 20%; } /* VendorID */
+#pci-scroll thead th:nth-child(3) { width: 20%; } /* DeviceID */
+#pci-scroll thead th:nth-child(4) { width: 50%; } /* Device Name */
 #pci-scroll tbody tr:nth-child(odd) { background: rgba(255,255,255,0.02); }
 #pci-scroll::-webkit-scrollbar { width: 10px; }
 #pci-scroll::-webkit-scrollbar-thumb { background: rgba(255,106,0,0.25); border-radius: 6px; }

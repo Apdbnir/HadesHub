@@ -99,7 +99,21 @@ int main(int argc, char** argv) {
         ss << "{\"devices\": [";
         for (size_t i = 0; i < devices.size(); ++i) {
             const auto &d = devices[i];
-            ss << "{\"slot\":\"" << d.slot << "\",\"vid\":\"" << d.vid << "\",\"did\":\"" << d.did << "\",\"vendor\":\"" << d.vendor << "\",\"deviceName\":\"" << d.deviceName << "\"}";
+            // For simplicity, let's avoid complex escaping for now and just remove problematic characters
+            std::string cleanDeviceName = d.deviceName;
+            std::string cleanVendor = d.vendor;
+            
+            // Replace quotes, backslashes and other JSON-problematic characters with spaces
+            for (auto& c : cleanDeviceName) {
+                if (c == '"' || c == '\\') c = ' ';
+                if (c == '\n' || c == '\r' || c == '\t') c = ' ';
+            }
+            for (auto& c : cleanVendor) {
+                if (c == '"' || c == '\\') c = ' ';
+                if (c == '\n' || c == '\r' || c == '\t') c = ' ';
+            }
+            
+            ss << "{\"slot\":\"" << d.slot << "\",\"vid\":\"" << d.vid << "\",\"did\":\"" << d.did << "\",\"vendor\":\"" << cleanVendor << "\",\"deviceName\":\"" << cleanDeviceName << "\"}";
             if (i + 1 < devices.size()) ss << ",";
         }
         ss << "]}";

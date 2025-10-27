@@ -4,8 +4,8 @@
  typedef struct _PCI_VENTABLE
  {
      unsigned short VenId;
-     char *VenShort;
-     char *VenFull;
+     const char *VenShort;
+     const char *VenFull;
  } PCI_VENTABLE;
 
  extern PCI_VENTABLE PciVenTable[];
