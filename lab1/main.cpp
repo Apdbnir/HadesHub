@@ -38,6 +38,7 @@ class batteryMonitor{
     std::string isEco();
 };
 
+// Определение статуса батареи (заряжается/не заряжается)
 std::string batteryFlagToString(BYTE flag) {
     std::string result;
 
@@ -57,6 +58,7 @@ std::string batteryFlagToString(BYTE flag) {
     return result;
 }
 
+// Возвращает статус батареи (заряжается/не заряжается)
 std::string batteryMonitor::getStatus(){
     SYSTEM_POWER_STATUS status;
     if (GetSystemPowerStatus(&status)){
@@ -89,6 +91,7 @@ std::string batteryMonitor::getPowerMode(){
     }
 }
 
+// Возвращает уровень заряда батареи в процентах
 int batteryMonitor::getCharge(){
     // returns charge in percents
     SYSTEM_POWER_STATUS status;
@@ -100,14 +103,17 @@ int batteryMonitor::getCharge(){
     }
 }
 
+// Переводит систему в режим сна
 int batteryMonitor::sleep(){
     return SetSuspendState(false, false, false) != 0;
 }
 
+// Переводит систему в режим гибернации
 int batteryMonitor::hibernate(){
     return SetSuspendState(true, false, false) != 0;
 }
 
+// Возвращает оставшееся время работы от батареи в секундах
 int batteryMonitor::getTimeLeft(){
     SYSTEM_POWER_STATUS sps;
     if (GetSystemPowerStatus(&sps)) {
@@ -117,16 +123,14 @@ int batteryMonitor::getTimeLeft(){
     }
 }
 
+// Проверяет включен ли режим энергосбережения
 std::string batteryMonitor::isEco() {
     SYSTEM_POWER_STATUS sps;
-    // GetSystemPowerStatus returns a non-zero value on success.
     if (GetSystemPowerStatus(&sps)) {
-        // According to documentation, SystemStatusFlag is 1 if battery saver is on.
         if (sps.SystemStatusFlag == 1) {
             return "On";
         }
     }
-    // If the function fails or the flag is not set, it's off.
     return "Off";
 }
 
@@ -135,6 +139,7 @@ batteryMonitor::batteryMonitor(){
 
 }
 
+// Возвращает подробную информацию о батарее 
 std::string batteryMonitor::getBatteryInfo() {
     std::stringstream ss;
     GUID batteryClassGuid = GUID_DEVCLASS_BATTERY;
@@ -253,6 +258,8 @@ int prevBatteryPercent = -1;
 std::chrono::steady_clock::time_point prevPercentTime;
 
 // --- Функции управления питанием ---
+
+// Устанавливает привилегии для операций сна/гибернации
 BOOL setPrivilege() {
     HANDLE hToken; TOKEN_PRIVILEGES tkp;
     if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &hToken)) return FALSE;
@@ -261,27 +268,28 @@ BOOL setPrivilege() {
     AdjustTokenPrivileges(hToken, FALSE, &tkp, 0, (PTOKEN_PRIVILEGES)NULL, 0);
     return GetLastError() == ERROR_SUCCESS;
 }
-// --- Исправленная функция сна ---
+
+// Переводит систему в режим сна
 void goToSleep() { 
     if (setPrivilege()) {
         // Используем более мягкий вызов, который с большей вероятностью сработает
         SetSuspendState(FALSE, FALSE, TRUE); 
     }
 }
+
+// Переводит систему в режим гибернации
 void goToHibernate() { 
     if (setPrivilege()) {
         SetSuspendState(TRUE, FALSE, TRUE); 
     }
 }
 
-// --- Функция получения типа батареи через WMI (Имитация) ---
+// Определение типа батареи
 std::string getBatteryChemistryWMI() {
-    // Эта функция оставлена для демонстрации того, как должен работать WMI.
-    // В текущей версии мы просто возвращаем "Li-Ion" для стабильности.
     return "Li-Ion";
 }
 
-// --- Надежная функция проверки режима энергосбережения через реестр ---
+// Проверяет состояние режима энергосбережения через реестр
 std::string getSaverModeStatus() {
     HKEY hKey;
     if (RegOpenKeyEx(HKEY_CURRENT_USER, "Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
@@ -296,7 +304,7 @@ std::string getSaverModeStatus() {
     return "Unknown";
 }
 
-// --- Функция вывода статуса в формате JSON ---
+// Выводит статус питания в формате JSON
 void printPowerStatus() {
     SYSTEM_POWER_STATUS sps;
     if (GetSystemPowerStatus(&sps)) {

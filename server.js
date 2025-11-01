@@ -377,11 +377,11 @@ app.post('/start-lab/:labId', async (req, res) => {
             const fs = require('fs');
             const lab4Dir = path.join(__dirname, 'lab4');
             const exePath = path.join(lab4Dir, 'webcammonitor.exe');  // Following the pattern
-            const srcPath = path.join(lab4Dir, 'main.cpp');
+            const srcPath = path.join(lab4Dir, 'main_server.cpp');  // Use the server version
 
             function compileWithGpp() {
                 return new Promise((resolve) => {
-                    const gpp = spawn('g++', ['main.cpp', '-O2', '-std=c++17', '-o', 'webcammonitor.exe', '-lole32', '-lwindowscodecs'], { cwd: lab4Dir });
+                    const gpp = spawn('g++', ['main_server.cpp', '-O2', '-std=c++17', '-o', 'webcammonitor.exe', '-lole32', '-lwindowscodecs', '-lsetupapi'], { cwd: lab4Dir });
                     gpp.stdout.on('data', d => console.log(`[g++] ${d}`));
                     gpp.stderr.on('data', d => console.error(`[g++] ${d}`));
                     gpp.on('close', (code) => resolve(code === 0));
@@ -391,7 +391,7 @@ app.post('/start-lab/:labId', async (req, res) => {
 
             function compileWithCl() {
                 return new Promise((resolve) => {
-                    const cl = spawn('cl', ['main.cpp', '/Fe:webcammonitor.exe'], { cwd: lab4Dir });
+                    const cl = spawn('cl', ['main_server.cpp', '/Fe:webcammonitor.exe'], { cwd: lab4Dir });
                     cl.stdout.on('data', d => console.log(`[cl] ${d}`));
                     cl.stderr.on('data', d => console.error(`[cl] ${d}`));
                     cl.on('close', (code) => resolve(code === 0));

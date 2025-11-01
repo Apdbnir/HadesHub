@@ -72,7 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (window.electronAPI) {
                 // In Electron, we could use IPC to communicate with backend
                 // For now, we'll use fetch to read the status file
-                const response = await fetch('webcam_status.json');
+                const response = await fetch('../webcam_status.json');
                 if (response.ok) {
                     return await response.json();
                 }
@@ -173,7 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             // Try to fetch the status file from the backend
             // Since this is running in Electron, we can access local files
-            const response = await fetch('./webcam_status.json?t=' + new Date().getTime());
+            const response = await fetch('../webcam_status.json?t=' + new Date().getTime());
             if (response.ok) {
                 const data = await response.json();
                 webcamData = {...webcamData, ...data}; // Update webcamData with new values
