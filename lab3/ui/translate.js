@@ -1,15 +1,31 @@
 const translations = {
     en: {
-        startMonitoring: 'Start PCI scan',
-        pciScan: 'PCI Devices',
+        startDiskScan: 'Start Disk Scan',
+        diskInfo: 'Disk Information',
         back: 'Back',
-        langButton: 'RU'
+        langButton: 'RU',
+        model: 'Model',
+        manufacturer: 'Manufacturer',
+        serialNumber: 'Serial Number',
+        firmware: 'Firmware',
+        memoryInfo: 'Total/Used/Free',
+        interfaceType: 'Interface Type',
+        supportedModes: 'Supported Modes',
+        noDiskInfo: 'No disk information found. Try running the application as administrator.'
     },
     ru: {
-        startMonitoring: 'Начать сканирование PCI',
-        pciScan: 'Устройства PCI',
+        startDiskScan: 'Начать сканирование дисков',
+        diskInfo: 'Информация о дисках',
         back: 'Назад',
-        langButton: 'EN'
+        langButton: 'EN',
+        model: 'Модель',
+        manufacturer: 'Производитель',
+        serialNumber: 'Серийный номер',
+        firmware: 'Прошивка',
+        memoryInfo: 'Всего/Использовано/Свободно',
+        interfaceType: 'Тип интерфейса',
+        supportedModes: 'Поддерживаемые режимы',
+        noDiskInfo: 'Информация о дисках не найдена. Попробуйте запустить приложение от имени администратора.'
     }
 };
 

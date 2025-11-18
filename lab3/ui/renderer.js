@@ -114,7 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (data.disks.length === 0) {
                             // Show message when no disks are found
                             const tr = document.createElement('tr');
-                            tr.innerHTML = '<td colspan="7" style="text-align: center; padding: 20px;">No disk information found. Try running the application as administrator.</td>';
+                            tr.innerHTML = `<td colspan="7" style="text-align: center; padding: 20px;">${getTranslation('noDiskInfo')}</td>`;
                             diskBody.appendChild(tr);
                         } else {
                             data.disks.forEach(disk => addRow(
@@ -133,5 +133,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Error silently - not logging to keep console clean
             }
         };
+    }
+
+    // Helper function to get translated text
+    function getTranslation(key) {
+        const lang = localStorage.getItem('language') || 'ru';
+        const translation = translations[lang] && translations[lang][key];
+        return translation || key;
     }
 });

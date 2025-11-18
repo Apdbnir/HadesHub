@@ -11,10 +11,10 @@
     </div>
 
     <video autoplay muted loop id="video-bg">
-        <source src="3lab Intro.mp4" type="video/mp4">
+        <source src="../../Main Menu.mp4" type="video/mp4">
     </video>
     <video autoplay muted loop id="video-bg-main" style="display: none;">
-        <source src="3lab.mp4" type="video/mp4">
+        <source src="../../Main Menu.mp4" type="video/mp4">
     </video>
 
     <div id="start-screen">
@@ -30,13 +30,13 @@
                         <table id="disk-table" style="width:100%;border-collapse:collapse;">
                             <thead>
                                 <tr>
-                                    <th style="text-align:left;padding:8px;border-bottom:1px solid rgba(255,255,255,0.08)">Model</th>
-                                    <th style="text-align:left;padding:8px;border-bottom:1px solid rgba(255,255,255,0.08)">Manufacturer</th>
-                                    <th style="text-align:left;padding:8px;border-bottom:1px solid rgba(255,255,255,0.08)">Serial Number</th>
-                                    <th style="text-align:left;padding:8px;border-bottom:1px solid rgba(255,255,255,0.08)">Firmware</th>
-                                    <th style="text-align:left;padding:8px;border-bottom:1px solid rgba(255,255,255,0.08)">Total/Used/Free</th>
-                                    <th style="text-align:left;padding:8px;border-bottom:1px solid rgba(255,255,255,0.08)">Interface Type</th>
-                                    <th style="text-align:left;padding:8px;border-bottom:1px solid rgba(255,255,255,0.08)">Supported Modes</th>
+                                    <th style="text-align:left;padding:8px;border-bottom:1px solid rgba(255,255,255,0.08)" data-key="model">Model</th>
+                                    <th style="text-align:left;padding:8px;border-bottom:1px solid rgba(255,255,255,0.08)" data-key="manufacturer">Manufacturer</th>
+                                    <th style="text-align:left;padding:8px;border-bottom:1px solid rgba(255,255,255,0.08)" data-key="serialNumber">Serial Number</th>
+                                    <th style="text-align:left;padding:8px;border-bottom:1px solid rgba(255,255,255,0.08)" data-key="firmware">Firmware</th>
+                                    <th style="text-align:left;padding:8px;border-bottom:1px solid rgba(255,255,255,0.08)" data-key="memoryInfo">Total/Used/Free</th>
+                                    <th style="text-align:left;padding:8px;border-bottom:1px solid rgba(255,255,255,0.08)" data-key="interfaceType">Interface Type</th>
+                                    <th style="text-align:left;padding:8px;border-bottom:1px solid rgba(255,255,255,0.08)" data-key="supportedModes">Supported Modes</th>
                                 </tr>
                             </thead>
                             <tbody id="disk-body"></tbody>

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Lab 5 - USB Device Monitor</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Video backgrounds with fallback images -->
+    <video id="introVideo" class="video-bg" autoplay muted loop playsinline>
+        <source src="5lab Intro.mp4" type="video/mp4">
+        <!-- Fallback image if video is not available -->
+        <img src="fallback_intro.jpg" alt="Intro background" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: -2;">
+    </video>
+
+    <video id="mainVideo" class="video-bg" autoplay muted loop playsinline style="display: none;">
+        <source src="5lab.mp4" type="video/mp4">
+        <!-- Fallback image if video is not available -->
+        <img src="fallback_main.jpg" alt="Main background" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: -2;">
+    </video>
+
+    <video id="connectVideo" class="video-bg" autoplay muted loop playsinline style="display: none;">
+        <source src="5lab Conected.mp4" type="video/mp4">
+        <!-- Fallback image if video is not available -->
+        <img src="fallback_connected.jpg" alt="Connect background" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: -2;">
+    </video>
+
+    <video id="disconnectVideo" class="video-bg" autoplay muted loop playsinline style="display: none;">
+        <source src="5lab Disconect.mp4" type="video/mp4">
+        <!-- Fallback image if video is not available -->
+        <img src="fallback_disconnect.jpg" alt="Disconnect background" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: -2;">
+    </video>
+
+    <video id="safeVideo" class="video-bg" autoplay muted loop playsinline style="display: none;">
+        <source src="5lab Save.mp4" type="video/mp4">
+        <!-- Fallback image if video is not available -->
+        <img src="fallback_safe.jpg" alt="Safe removal background" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: -2;">
+    </video>
+
+    <div class="lang-switcher">
+        <button class="lang-btn">EN</button>
+    </div>
+
+    <!-- Initial screen with "Start USB Scan" button -->
+    <div id="initial-screen" class="initial-screen">
+        <button id="start-scan-btn" class="start-btn">Start USB Scan</button>
+    </div>
+
+    <!-- Main application content (hidden initially) -->
+    <div id="main-app" class="container" style="display: none;">
+        <h1 data-key="usbMonitor">USB Device Monitor</h1>
+        <div class="info-grid">
+            <div class="info-item full-width">
+                <h2 data-key="connectedDevices">Connected Devices</h2>
+                <div id="device-list">
+                    <p data-key="loadingDevices">Loading devices...</p>
+                </div>
+            </div>
+            <div class="info-item full-width">
+                <h2 data-key="removalEvents">Removal Events</h2>
+                <div id="events-log">
+                    <p data-key="noEvents">No events</p>
+                </div>
+            </div>
+            <div class="info-item full-width">
+                <h2 data-key="safeRemovalFailures">Safe Removal Failures</h2>
+                <div id="failures-log">
+                    <p data-key="noFailures">No failures</p>
+                </div>
+            </div>
+        </div>
+        <div class="controls">
+            <button id="refresh-btn" data-key="refresh">Refresh</button>
+            <a href="../../labs.html" class="btn" data-key="back">Back</a>
+        </div>
+    </div>
+
+    <script src="translate.js"></script>
+    <script src="renderer.js"></script>
+</body>
+</html>

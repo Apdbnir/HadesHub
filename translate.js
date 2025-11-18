@@ -10,6 +10,7 @@ const translations = {
         lab5: "Lab 5",
         lab6: "Lab 6",
         back: "Back",
+        backToMenu: "Back to Menu",
         langButton: "RU"
     },
     ru: {
@@ -23,6 +24,7 @@ const translations = {
         lab5: "5 лаба",
         lab6: "6 лаба",
         back: "Назад",
+        backToMenu: "Назад в меню",
         langButton: "EN"
     }
 };

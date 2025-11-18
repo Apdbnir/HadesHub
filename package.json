@@ -2,9 +2,10 @@
   "name": "hadeshub",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "main.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "electron .",
+    "server": "node server.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "postinstall": "cd lab1/ui && npm install && cd ../.. && cd lab2/ui && npm install && cd ../.. && cd lab4/ui && npm install"
   },
@@ -19,6 +20,7 @@
   "dependencies": {
     "electron": "^28.0.0",
     "express": "^5.1.0",
+    "puppeteer": "^24.30.0",
     "ws": "^8.18.3"
   }
 }

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <rect width="1920" height="1080" fill="#004400"/>
+  <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" fill="#ffffff" font-size="48" font-family="Arial">Lab 5 - USB Monitor (Device Connected)</text>
+  <text x="50%" y="60%" text-anchor="middle" dominant-baseline="middle" fill="#ff6a00" font-size="36" font-family="Arial">5lab Conected.mp4 should be playing</text>
+</svg>

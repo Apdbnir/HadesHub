@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"C:/VS Code/HadesHub/lab4/build_test/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

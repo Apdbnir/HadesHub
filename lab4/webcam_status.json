@@ -1,6 +1,23 @@
 {
-    "webcam_info": "Integrated Camera | Resolution: 1920x1080 | Format: MJPEG",
-    "webcam_active": true,
-    "recording": false,
-    "hidden_mode": false
+  "webcam_active": false,
+  "recording": false,
+  "hidden_mode": false,
+  "camera_info": {
+    "index": 0,
+    "name": "Not initialized",
+    "width": 0,
+    "height": 0,
+    "fps": 0,
+    "sensor_type": "Unknown",
+    "matrix_type": "Unknown",
+    "min_illumination": 0,
+    "focus_type": "Unknown",
+    "video_hdr": "Not supported",
+    "brightness": 0,
+    "contrast": 0,
+    "sharpness": 0,
+    "saturation": 0,
+    "is_opened": false,
+    "simulated": true
+  }
 }

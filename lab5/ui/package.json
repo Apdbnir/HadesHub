@@ -1,0 +1,23 @@
+{
+  "name": "usbmonitor-ui",
+  "version": "1.0.0",
+  "description": "UI for the USB monitor",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^28.0.0"
+  },
+  "build": {
+    "appId": "com.example.usbmonitor",
+    "productName": "USB Monitor",
+    "directories": {
+      "output": "dist"
+    }
+  }
+}

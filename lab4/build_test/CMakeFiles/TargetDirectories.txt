@@ -1,0 +1,3 @@
+C:/VS Code/HadesHub/lab4/build_test/CMakeFiles/lab4.dir
+C:/VS Code/HadesHub/lab4/build_test/CMakeFiles/edit_cache.dir
+C:/VS Code/HadesHub/lab4/build_test/CMakeFiles/rebuild_cache.dir
