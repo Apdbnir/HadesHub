@@ -185,16 +185,22 @@ document.addEventListener('DOMContentLoaded', () => {
             let deviceType = 'Хранилище';
             if (device.isMountedAsCDROM) deviceType = 'CD-ROM';
             else if (device.isMountedAsFlash) deviceType = 'Флеш-накопитель';
+            else if (device.friendlyName && device.friendlyName.toLowerCase().includes('mouse')) deviceType = 'Мышь';
 
             // Update language based on stored preference
             const lang = localStorage.getItem('language') || 'ru';
             if (lang === 'en') {
-                deviceType = device.isMountedAsCDROM ? 'CD-ROM' : (device.isMountedAsFlash ? 'Flash drive' : 'Storage');
+                if (device.friendlyName && device.friendlyName.toLowerCase().includes('mouse')) deviceType = 'Mouse';
+                else deviceType = device.isMountedAsCDROM ? 'CD-ROM' : (device.isMountedAsFlash ? 'Flash drive' : 'Storage');
             }
+
+            // Determine device type and path for ejection
+            let devicePathForEjection = device.driveLetter || device.deviceInstanceId;
+            let deviceDisplayPath = device.driveLetter || device.deviceInstanceId;
 
             deviceInfo.innerHTML = `
                 <strong>${device.friendlyName || 'Unknown device'}</strong><br>
-                Drive letter: ${device.driveLetter}<br>
+                ${device.driveLetter ? `Drive letter: ${device.driveLetter}<br>` : `Device ID: ${device.deviceInstanceId}<br>`}
                 Type: ${deviceType}<br>
                 Safe to eject: ${device.isSafeToEject ? 'Yes' : 'No'}
             `;
@@ -226,7 +232,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }, 3000); // Show safe video for 3 seconds
                 }
 
-                safeEjectDevice(device.driveLetter);
+                safeEjectDevice(devicePathForEjection);
             };
 
             deviceItem.appendChild(deviceInfo);

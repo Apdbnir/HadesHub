@@ -5,9 +5,9 @@
 #include <hidsdi.h>    // For HID interface GUID
 #include <cfgmgr32.h>  // For CM_* functions
 #include <winioctl.h>  // For device interface GUIDs
-#include <restartmanager.h> 
+#include <restartmanager.h>
 #include <psapi.h>     // For Process Status API
-#include <tlhelp32.h>  
+#include <tlhelp32.h>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -25,14 +25,14 @@ static const GUID GUID_DEVINTERFACE_HID = {0x4d1e55b2, 0xf16f, 0x11cf, {0x88, 0x
 struct USBDeviceInfo {
     std::string devicePath;
     std::string deviceName;
-    std::string driveLetter; 
+    std::string driveLetter;
     bool isStorageDevice;
     bool isMountedAsCDROM;
     bool isMountedAsFlash;
-    std::string volumePath;   
+    std::string volumePath;
     std::string friendlyName;
     std::string hardwareId;
-    std::string deviceInstanceId;  
+    std::string deviceInstanceId;
     bool isSafeToEject;
 };
 
@@ -397,9 +397,249 @@ const device_info get_device_info(char letter) {
     return info;
 }
 
+// Function to safely disable a mouse/HID device using Windows SetupAPI
+bool safeEjectMouseDevice(const std::string& deviceInstanceId) {
+    try {
+        std::cerr << "[USB Monitor] Attempting to disable mouse device: " << deviceInstanceId << std::endl;
+
+        // Locate the device instance from the ID string
+        DEVINST devInst = 0;
+        CONFIGRET cr = CM_Locate_DevNodeA(&devInst, (DEVINSTID_A)deviceInstanceId.c_str(), 0);
+        if (cr != CR_SUCCESS || devInst == 0) {
+            std::cerr << "[USB Monitor] Failed to locate device instance: " << deviceInstanceId << std::endl;
+
+            // Add to failure log
+            EnterCriticalSection(&g_usbCriticalSection);
+            g_safeRemovalFailures.push_back(deviceInstanceId + " (failed to locate device instance)");
+            g_usbEventLog.push_back("Failed to disable mouse device: " + deviceInstanceId + " (failed to locate device)");
+            LeaveCriticalSection(&g_usbCriticalSection);
+            return false;
+        }
+
+        // Try to eject the device first (most appropriate for HID devices)
+        cr = CM_Request_Device_EjectA(
+            devInst,
+            NULL,    // PNP_VETO_TYPE
+            NULL,    // veto name buffer
+            0,       // buffer size
+            0        // Flags - no special flags
+        );
+
+        if (cr == CR_SUCCESS) {
+            std::cerr << "[USB Monitor] Successfully sent eject request to mouse device: " << deviceInstanceId << std::endl;
+
+            EnterCriticalSection(&g_usbCriticalSection);
+            g_usbEventLog.push_back("Successfully sent eject request for mouse device: " + deviceInstanceId);
+            LeaveCriticalSection(&g_usbCriticalSection);
+            return true;
+        } else {
+            std::cerr << "[USB Monitor] CM_Request_Device_EjectA failed with code: " << cr << ", trying alternative methods..." << std::endl;
+        }
+
+        // If eject failed, try to unplug (fallback method)
+        cr = CM_Query_And_Remove_SubTreeA(
+            devInst,
+            NULL,    // PNP_VETO_TYPE
+            NULL,    // veto name buffer
+            0,       // buffer size
+            CM_QUERY_REMOVE_UI_NOT_OK  // Flags - don't show UI
+        );
+
+        if (cr == CR_SUCCESS) {
+            std::cerr << "[USB Monitor] Successfully sent removal query to mouse device: " << deviceInstanceId << std::endl;
+
+            EnterCriticalSection(&g_usbCriticalSection);
+            g_usbEventLog.push_back("Successfully sent removal query for mouse device: " + deviceInstanceId);
+            LeaveCriticalSection(&g_usbCriticalSection);
+            return true;
+        } else {
+            std::cerr << "[USB Monitor] CM_Query_And_Remove_SubTreeA failed with code: " << cr << std::endl;
+
+            // If query remove failed, try to disable the device
+            cr = CM_Disable_DevNode(devInst, CM_DISABLE_UI_NOT_OK);
+            if (cr == CR_SUCCESS) {
+                std::cerr << "[USB Monitor] Successfully disabled mouse device: " << deviceInstanceId << std::endl;
+
+                EnterCriticalSection(&g_usbCriticalSection);
+                g_usbEventLog.push_back("Successfully disabled mouse device: " + deviceInstanceId);
+                LeaveCriticalSection(&g_usbCriticalSection);
+                return true;
+            } else {
+                std::cerr << "[USB Monitor] CM_Disable_DevNode also failed with code: " << cr << std::endl;
+
+                // Try SetupAPI approach
+                HDEVINFO deviceInfoSet = SetupDiGetClassDevsA(NULL, NULL, NULL, DIGCF_ALLCLASSES | DIGCF_PRESENT);
+                if (deviceInfoSet != INVALID_HANDLE_VALUE) {
+                    SP_DEVINFO_DATA devInfoData;
+                    devInfoData.cbSize = sizeof(SP_DEVINFO_DATA);
+
+                    // Find the specific device
+                    for (DWORD i = 0; SetupDiEnumDeviceInfo(deviceInfoSet, i, &devInfoData); i++) {
+                        char currentDeviceId[1024];
+                        if (SetupDiGetDeviceInstanceIdA(deviceInfoSet, &devInfoData, currentDeviceId, sizeof(currentDeviceId), NULL)) {
+                            if (strcmp(currentDeviceId, deviceInstanceId.c_str()) == 0) {
+                                // Try to call the removal function directly
+                                if (SetupDiCallClassInstaller(DIF_REMOVE, deviceInfoSet, &devInfoData)) {
+                                    std::cerr << "[USB Monitor] Successfully sent device removal via SetupAPI: " << deviceInstanceId << std::endl;
+
+                                    SetupDiDestroyDeviceInfoList(deviceInfoSet);
+
+                                    EnterCriticalSection(&g_usbCriticalSection);
+                                    g_usbEventLog.push_back("Successfully sent removal request for mouse device: " + deviceInstanceId);
+                                    LeaveCriticalSection(&g_usbCriticalSection);
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                    SetupDiDestroyDeviceInfoList(deviceInfoSet);
+                }
+
+                // If all methods fail, report failure
+                std::cerr << "[USB Monitor] All methods to disable mouse device failed with code: " << cr << std::endl;
+
+                // Add to failure log
+                EnterCriticalSection(&g_usbCriticalSection);
+                g_safeRemovalFailures.push_back(deviceInstanceId + " (failed to disable device - CM codes: " + std::to_string(cr) + ")");
+                g_usbEventLog.push_back("Failed to disable mouse device: " + deviceInstanceId + " (disable failed - error: " + std::to_string(cr) + ")");
+                LeaveCriticalSection(&g_usbCriticalSection);
+                return false;
+            }
+        }
+
+    } catch (const std::exception& e) {
+        std::cerr << "[USB Monitor] Exception in safeEjectMouseDevice: " << e.what() << std::endl;
+
+        // Add to failure log
+        EnterCriticalSection(&g_usbCriticalSection);
+        g_safeRemovalFailures.push_back(deviceInstanceId + " (exception: " + std::string(e.what()) + ")");
+        g_usbEventLog.push_back("Failed to disable mouse device: " + deviceInstanceId + " (exception: " + std::string(e.what()) + ")");
+        LeaveCriticalSection(&g_usbCriticalSection);
+        return false;
+    }
+}
+
+// Function to check if a drive is busy (locked by processes)
+bool isDriveBusy(const std::string& driveLetter) {
+    std::string devicePath = "\\\\.\\" + driveLetter.substr(0, 1) + ":";
+
+    // Method 1: Try to get disk free space - if it fails, the drive might be busy
+    ULARGE_INTEGER freeBytesAvailable, totalNumberOfBytes, totalNumberOfFreeBytes;
+    std::string rootPath = driveLetter.substr(0, 1) + ":\\";
+    if (!GetDiskFreeSpaceExA(rootPath.c_str(), &freeBytesAvailable, &totalNumberOfBytes, &totalNumberOfFreeBytes)) {
+        // If we can't get disk info, it might be busy
+        return true;
+    }
+
+    // Method 2: Try to open the root directory with exclusive access
+    std::string rootDir = driveLetter.substr(0, 1) + ":\\";
+    HANDLE hDir = CreateFileA(
+        rootDir.c_str(),
+        GENERIC_READ | GENERIC_WRITE,
+        0,  // No sharing to test for locks
+        NULL,
+        OPEN_EXISTING,
+        FILE_FLAG_BACKUP_SEMANTICS, // Required to open directory handles
+        NULL
+    );
+
+    if (hDir != INVALID_HANDLE_VALUE) {
+        CloseHandle(hDir);
+        // If we can open with exclusive access, the directory is not locked
+        // but the drive may still be busy due to file operations
+    } else {
+        DWORD error = GetLastError();
+        if (error == ERROR_SHARING_VIOLATION) {
+            return true; // Directory is locked
+        }
+    }
+
+    // Method 3: Try to lock the volume itself
+    HANDLE hVolume = CreateFileA(
+        devicePath.c_str(),
+        GENERIC_READ | GENERIC_WRITE,
+        FILE_SHARE_READ | FILE_SHARE_WRITE,
+        NULL,
+        OPEN_EXISTING,
+        0,
+        NULL
+    );
+
+    if (hVolume != INVALID_HANDLE_VALUE) {
+        DWORD bytesReturned;
+        BOOL lockResult = DeviceIoControl(
+            hVolume,
+            FSCTL_LOCK_VOLUME,
+            NULL, 0,
+            NULL, 0,
+            &bytesReturned,
+            NULL
+        );
+
+        if (!lockResult) {
+            DWORD error = GetLastError();
+            CloseHandle(hVolume);
+            // If we can't lock the volume, it's likely busy
+            if (error == ERROR_NOT_LOCKED || error == ERROR_LOCK_VIOLATION || error == ERROR_SHARING_VIOLATION) {
+                return true;
+            }
+        } else {
+            // We successfully locked it, unlock and continue
+            DeviceIoControl(
+                hVolume,
+                FSCTL_UNLOCK_VOLUME,
+                NULL, 0,
+                NULL, 0,
+                &bytesReturned,
+                NULL
+            );
+            CloseHandle(hVolume);
+        }
+    } else {
+        // If we can't even open the volume, it's definitely busy
+        return true;
+    }
+
+    // Method 4: Try to open with no sharing to check if any process is using it
+    HANDLE hTestAccess = CreateFileA(
+        devicePath.c_str(),
+        GENERIC_READ,
+        0,  // No sharing to check if anything is using it
+        NULL,
+        OPEN_EXISTING,
+        0,
+        NULL
+    );
+
+    if (hTestAccess == INVALID_HANDLE_VALUE) {
+        DWORD error = GetLastError();
+        if (error == ERROR_SHARING_VIOLATION) {
+            CloseHandle(hTestAccess);
+            return true; // Drive is in use
+        }
+    } else {
+        CloseHandle(hTestAccess);
+    }
+
+    // If all checks passed, the drive is likely not busy
+    return false;
+}
+
 // Function to safely eject a USB device using Windows SetupAPI
 bool safeEjectUSBDevice(const std::string& driveLetter) {
     try {
+        // First check if the drive is busy
+        if (isDriveBusy(driveLetter)) {
+            std::cerr << "[USB Monitor] Drive " << driveLetter << " is busy and cannot be safely ejected" << std::endl;
+
+            // Add to failure log
+            EnterCriticalSection(&g_usbCriticalSection);
+            g_safeRemovalFailures.push_back(driveLetter + " (drive is busy, cannot eject)");
+            g_usbEventLog.push_back("Failed to safely eject device: " + driveLetter + " (drive is busy, cannot eject)");
+            LeaveCriticalSection(&g_usbCriticalSection);
+            return false;
+        }
+
         // Get the drive letter character
         char letter = driveLetter[0];
         std::string driveRoot = std::string(1, letter) + ":\\";
@@ -772,55 +1012,13 @@ std::vector<USBDeviceInfo> getConnectedUSBDevices() {
                         std::string hardwareIdStr(hardwareId);
                         std::transform(hardwareIdStr.begin(), hardwareIdStr.end(), hardwareIdStr.begin(), ::toupper);
 
-                        // Identify device types based on hardware ID
-                        if (hardwareIdStr.find("VID_") != std::string::npos && hardwareIdStr.find("PID_") != std::string::npos) {
-                            // Extract vendor and product IDs
-                            size_t vidPos = hardwareIdStr.find("VID_");
-                            size_t pidPos = hardwareIdStr.find("PID_");
-
-                            if (vidPos != std::string::npos) {
-                                std::string vid = hardwareIdStr.substr(vidPos + 4, 4);
-
-                                // Map common vendor IDs to device types
-                                if (vid == "046D") friendlyName = "Logitech Device";
-                                else if (vid == "1532") friendlyName = "Razer Device";  // Your mouse!
-                                else if (vid == "0489") friendlyName = "MediaTek Bluetooth Device";
-                                else if (vid == "0B05") friendlyName = "ASUS Device";
-                                else if (vid == "1BBB") friendlyName = "Tether Device";
-                                else if (vid == "2B7E") friendlyName = "Webcam Device";
-                                else if (vid == "1022") friendlyName = "AMD USB Device";
-                                else {
-                                    // Generic USB device with IDs
-                                    friendlyName = "USB Device VID_" + vid;
-                                }
-
-                                // Add product ID to name
-                                if (pidPos != std::string::npos) {
-                                    std::string pid = hardwareIdStr.substr(pidPos + 4, 4);
-                                    friendlyName += " PID_" + pid;
-                                }
-                            }
-                        }
-                        // Check for specific device types in hardware ID
-                        else if (hardwareIdStr.find("USBSTOR") != std::string::npos) {
-                            friendlyName = "USB Storage Device";
-                        }
-                        else if (hardwareIdStr.find("ROOT_HUB") != std::string::npos) {
-                            friendlyName = "USB Root Hub";
-                        }
-                        else if (hardwareIdStr.find("HID") != std::string::npos) {
-                            friendlyName = "HID Device";
-                        }
-                        else if (hardwareIdStr.find("USB\\VID_1532&PID_0071") != std::string::npos) {
-                            friendlyName = "Razer Mouse Device"; // Specific ID for your mouse
-                        }
-
                         // Get localized description as fallback if available
                         char deviceDesc[1024];
+                        std::string descStr = "";
                         if (SetupDiGetDeviceRegistryPropertyA(deviceInfoSet, &devInfoData, SPDRP_DEVICEDESC,
                                                               NULL, (PBYTE)deviceDesc, sizeof(deviceDesc), NULL)) {
                             // Only use if it contains ASCII characters
-                            std::string descStr(deviceDesc);
+                            descStr = std::string(deviceDesc);
                             bool isASCII = true;
                             for (char c : descStr) {
                                 if (c < 32 || c > 126) {
@@ -829,9 +1027,66 @@ std::vector<USBDeviceInfo> getConnectedUSBDevices() {
                                 }
                             }
                             if (isASCII && !descStr.empty()) {
-                                friendlyName = descStr;
+                                friendlyName = descStr; // Use description as primary name
                             }
                         }
+
+                        // If we didn't get a good description, use device type identification
+                        if (friendlyName == "USB Device" || friendlyName.empty()) {
+                            // Identify device types based on hardware ID
+                            if (hardwareIdStr.find("VID_") != std::string::npos && hardwareIdStr.find("PID_") != std::string::npos) {
+                                // Extract vendor and product IDs
+                                size_t vidPos = hardwareIdStr.find("VID_");
+                                size_t pidPos = hardwareIdStr.find("PID_");
+
+                                if (vidPos != std::string::npos) {
+                                    std::string vid = hardwareIdStr.substr(vidPos + 4, 4);
+
+                                    // Map common vendor IDs to device types
+                                    if (vid == "046D") friendlyName = "Logitech Device";
+                                    else if (vid == "1532") friendlyName = "Razer Device";  // Your mouse!
+                                    else if (vid == "0489") friendlyName = "MediaTek Bluetooth Device";
+                                    else if (vid == "0B05") friendlyName = "ASUS Device";
+                                    else if (vid == "1BBB") friendlyName = "Tether Device";
+                                    else if (vid == "2B7E") friendlyName = "Webcam Device";
+                                    else if (vid == "1022") friendlyName = "AMD USB Device";
+                                    else {
+                                        // Generic USB device with IDs
+                                        friendlyName = "USB Device VID_" + vid;
+                                    }
+
+                                    // Add product ID to name
+                                    if (pidPos != std::string::npos) {
+                                        std::string pid = hardwareIdStr.substr(pidPos + 4, 4);
+                                        friendlyName += " PID_" + pid;
+                                    }
+                                }
+                            }
+                            // Check for specific device types in hardware ID
+                            else if (hardwareIdStr.find("USBSTOR") != std::string::npos) {
+                                friendlyName = "USB Storage Device";
+                            }
+                            else if (hardwareIdStr.find("ROOT_HUB") != std::string::npos) {
+                                friendlyName = "USB Root Hub";
+                            }
+                            else if (hardwareIdStr.find("HID") != std::string::npos) {
+                                // Check for mouse specific identifiers in the hardware ID
+                                if (hardwareIdStr.find("HID\\VID_") != std::string::npos &&
+                                    (hardwareIdStr.find("HID_DEVICE_UP:0001_U:0002") != std::string::npos || // Mouse usage
+                                     hardwareIdStr.find("&UP:0001_U:0002") != std::string::npos || // Alternative format
+                                     hardwareIdStr.find("MOUSE") != std::string::npos || // Contains "MOUSE"
+                                     hardwareIdStr.find("MICE") != std::string::npos)) { // Contains "MICE"
+                                    friendlyName = "Mouse Device";
+                                }
+                                else {
+                                    friendlyName = "HID Device";
+                                }
+                            }
+                            else if (hardwareIdStr.find("USB\\VID_1532&PID_0071") != std::string::npos) {
+                                friendlyName = "Razer Mouse Device"; // Specific ID for your mouse
+                            }
+                        }
+
 
                         USBDeviceInfo device;
                         device.devicePath = std::string(hardwareId); // Use hardware ID as path for non-storage devices
@@ -842,7 +1097,17 @@ std::vector<USBDeviceInfo> getConnectedUSBDevices() {
                         device.friendlyName = friendlyName;
                         device.hardwareId = std::string(hardwareId);
                         device.deviceInstanceId = std::string(deviceId);
-                        device.isSafeToEject = false; // Non-storage devices can't be safely ejected as storage
+
+                        // Check if this is a mouse or other safe-to-disable HID device
+                        std::string lowerFriendlyName = friendlyName;
+                        std::transform(lowerFriendlyName.begin(), lowerFriendlyName.end(), lowerFriendlyName.begin(), ::tolower);
+                        device.isSafeToEject = (lowerFriendlyName.find("mouse") != std::string::npos ||
+                                               lowerFriendlyName.find("razer") != std::string::npos ||  // Razer devices like your DeathAdder
+                                               lowerFriendlyName.find("logitech") != std::string::npos ||
+                                               hardwareIdStr.find("HID") != std::string::npos &&
+                                               (hardwareIdStr.find("UP:0001_U:0002") != std::string::npos ||
+                                                hardwareIdStr.find("MOUSE") != std::string::npos ||
+                                                hardwareIdStr.find("MICE") != std::string::npos)); // Mouse usage patterns
 
                         usbDevices.push_back(device);
                     }
@@ -994,8 +1259,18 @@ void commandListener() {
         if (line.substr(0, 12) == "safe_eject: ") {
             std::string devicePath = line.substr(12);
             std::cerr << "[USB Monitor] Received safe eject command for: " << devicePath << std::endl;
-            // The device path from the UI will be the drive letter, e.g., "E:\\"
-            safeEjectUSBDevice(devicePath);
+
+            // Determine if this is a storage device (has drive letter) or HID device (has device instance ID)
+            // Storage devices have format like "E:\\" while HID devices have device instance IDs like "USB\VID_..."
+            if (devicePath.length() >= 3 && devicePath[1] == ':' && devicePath[2] == '\\') {
+                // This is a storage device with drive letter format like "E:\\"
+                std::cerr << "[USB Monitor] Processing as storage device: " << devicePath << std::endl;
+                safeEjectUSBDevice(devicePath);
+            } else {
+                // This is likely a HID device with device instance ID (e.g., "USB\\VID_1532&PID_0071...")
+                std::cerr << "[USB Monitor] Processing as HID device: " << devicePath << std::endl;
+                safeEjectMouseDevice(devicePath);
+            }
         }
     }
 }

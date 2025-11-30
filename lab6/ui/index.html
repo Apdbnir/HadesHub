@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Лабораторная работа №6 - Мониторинг Bluetooth устройств</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="lang-switcher">
+        <button class="lang-btn">EN</button>
+    </div>
+
+    <div id="background" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2;">
+    <video id="background-video" autoplay muted loop style="width: 100%; height: 100%; object-fit: cover;">
+        <source src="6lab Intro.mp4" type="video/mp4">
+        Ваш браузер не поддерживает видео.
+    </video>
+</div>
+
+    <div id="start-screen">
+        <button id="start-btn" data-key="startMonitoring">Начать мониторинг</button>
+    </div>
+
+    <div id="main-content" style="display:none;">
+        <div class="container">
+            <h1 data-key="bluetoothMonitor">Мониторинг Bluetooth устройств</h1>
+
+            <!-- Two-column container for device sections -->
+            <div class="devices-container">
+                <!-- Connected devices section -->
+                <div id="connected-devices" class="device-section">
+                    <h2 data-key="connectedDevices">Подключенные устройства</h2>
+                    <div class="scrolled-devices">
+                        <ul id="connected-list"></ul>
+                    </div>
+                </div>
+
+                <!-- Available devices section -->
+                <div id="scanned-devices" class="device-section">
+                    <h2 data-key="availableDevices">Доступные устройства</h2>
+                    <div class="scrolled-devices">
+                        <ul id="scanned-list"></ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- File selection for audio playback at the bottom -->
+            <div class="file-transfer">
+                <h2 data-key="fileTransfer">Передача файла</h2>
+                <div class="transfer-controls">
+                    <input type="file" id="file-input" style="display: none;">
+                    <button id="select-file-btn" class="btn" data-key="selectFile">Выбрать файл</button>
+                    <span id="selected-file-name"></span>
+                    <button id="play-btn" class="btn" data-key="playFile" disabled>Воспроизвести</button>
+                </div>
+                <div id="transfer-progress" class="progress-container" style="display: none;">
+                    <div class="progress-bar">
+                        <div id="progress-fill"></div>
+                    </div>
+                    <span id="progress-text">0%</span>
+                </div>
+            </div>
+
+            <div class="status-panel">
+                <h2 data-key="status">Статус</h2>
+                <p id="bluetooth-status" data-key="bluetoothStatus">Bluetooth выключен</p>
+                <p id="connection-status" data-key="connectionStatus">Не подключено</p>
+            </div>
+
+            <div class="controls">
+                <a href="../../labs.html" class="btn" data-key="back">Назад</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="translate.js"></script>
+    <script src="renderer.js"></script>
+</body>
+</html>
